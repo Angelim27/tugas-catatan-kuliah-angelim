@@ -398,8 +398,55 @@ class _HomeScreenState extends State<HomeScreen> {
                                           context,
                                           MaterialPageRoute(builder: (context) => AddNoteScreen(noteDataToEdit: note)),
                                         );
-                                      } else if (value == 'delete' && note['id'] != null) {
-                                        await _firebaseService.deleteNote(note['id']);
+                                      } 
+                                      // REVISI DI SINI: Membuka dialog konfirmasi sebelum benar-benar menghapus ke Firebase
+                                      else if (value == 'delete' && note['id'] != null) {
+                                        showDialog(
+                                          context: context,
+                                          barrierDismissible: false, // User wajib memilih salah satu tombol, tidak bisa asal klik di luar dialog
+                                          builder: (BuildContext context) {
+                                            return AlertDialog(
+                                              title: const Row(
+                                                children: [
+                                                  Icon(Icons.warning_amber_rounded, color: Colors.red),
+                                                  SizedBox(width: 8),
+                                                  Text('Hapus Catatan'),
+                                                ],
+                                              ),
+                                              content: const Text('Apakah Anda yakin ingin menghapus catatan kuliah ini? Tindakan ini tidak dapat dibatalkan.'),
+                                              actions: [
+                                                // Tombol Batal
+                                                TextButton(
+                                                  onPressed: () {
+                                                    Navigator.pop(context); // Menutup dialog tanpa menghapus apa-apa
+                                                  },
+                                                  child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+                                                ),
+                                                // Tombol Hapus (Eksekusi)
+                                                ElevatedButton(
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.red.shade50,
+                                                    elevation: 0,
+                                                  ),
+                                                  onPressed: () async {
+                                                    Navigator.pop(context); // Tutup dialognya dulu
+                                                    await _firebaseService.deleteNote(note['id']); // Baru eksekusi hapus data dari Firebase
+                                                    
+                                                    // Memberikan feedback sukses berupa SnackBar kecil di bawah layar
+                                                    if (!context.mounted) return;
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text('Catatan berhasil dihapus'),
+                                                        backgroundColor: Colors.red,
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: const Text('Hapus', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
                                       }
                                     },
                                     itemBuilder: (BuildContext context) => [
