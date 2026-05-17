@@ -1,14 +1,21 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:catatan_kuliah/firebase_options.dart'; 
+import 'package:provider/provider.dart'; // Import Provider
+import 'firebase_options.dart';
 import 'package:catatan_kuliah/screens/home_screen.dart';
+import 'package:catatan_kuliah/services/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => ThemeProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -16,14 +23,22 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Membaca status tema saat ini (Dark atau Light)
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Catatan Kuliah App',
+      themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple), 
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple, brightness: Brightness.light),
         useMaterial3: true,
       ),
-      home: const HomeScreen(), 
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple, brightness: Brightness.dark),
+        useMaterial3: true,
+      ),
+      home: const HomeScreen(),
     );
   }
 }
