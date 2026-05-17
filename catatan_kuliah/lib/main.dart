@@ -4,6 +4,7 @@ import 'package:provider/provider.dart'; // Import Provider
 import 'firebase_options.dart';
 import 'package:catatan_kuliah/screens/home_screen.dart';
 import 'package:catatan_kuliah/services/theme_provider.dart';
+import 'package:catatan_kuliah/screens/sign_in_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,7 +39,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple, brightness: Brightness.dark),
         useMaterial3: true,
       ),
-      home: const HomeScreen(),
+      home: const SignInScreen(),
     );
   }
 }

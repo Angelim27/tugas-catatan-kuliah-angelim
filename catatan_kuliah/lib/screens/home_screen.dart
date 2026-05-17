@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +9,8 @@ import 'package:catatan_kuliah/services/theme_provider.dart';
 import 'package:catatan_kuliah/screens/add_note_screen.dart';
 import 'package:catatan_kuliah/screens/note_detail_screen.dart';
 import 'package:catatan_kuliah/screens/course_list_screen.dart';
+
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -264,14 +268,32 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const UserAccountsDrawerHeader(
-              accountName: Text('Angelim', style: TextStyle(fontWeight: FontWeight.bold)),
-              accountEmail: Text('NPM: 2327240084'),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, color: Colors.deepPurple, size: 40),
-              ),
-              decoration: BoxDecoration(color: Colors.deepPurple),
+            // GERBANG DINAMIS: Mengambil data user yang sedang login dari Firestore
+            FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(FirebaseAuth.instance.currentUser?.uid)
+                  .get(),
+              builder: (context, snapshot) {
+                // Ambil email langsung dari Firebase Auth sebagai cadangan cepat
+                final String userEmail = FirebaseAuth.instance.currentUser?.email ?? 'Tidak ada email';
+                String userName = 'Memuat nama...';
+
+                if (snapshot.hasData && snapshot.data!.exists) {
+                  final data = snapshot.data!.data() as Map<String, dynamic>?;
+                  userName = data?['fullName'] ?? 'Pengguna';
+                }
+
+                return UserAccountsDrawerHeader(
+                  accountName: Text(userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  accountEmail: Text(userEmail),
+                  currentAccountPicture: const CircleAvatar(
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.person, color: Colors.deepPurple, size: 40),
+                  ),
+                  decoration: const BoxDecoration(color: Colors.deepPurple),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.class_, color: Colors.deepPurple),
