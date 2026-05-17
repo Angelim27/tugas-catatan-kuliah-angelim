@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "981205643687",
+    "firebase_url": "https://catatan-kuliah-angelim-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "catatan-kuliah-angelim",
+    "storage_bucket": "catatan-kuliah-angelim.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:981205643687:android:350f598bab22bc4d77c682",
+        "android_client_info": {
+          "package_name": "com.example.catatan_kuliah"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCfWlu_b7LNHC-YSKpmmXi7LNcxLmMPm4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
