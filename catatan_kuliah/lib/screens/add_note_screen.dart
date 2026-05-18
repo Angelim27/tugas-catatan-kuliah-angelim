@@ -1,10 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart'; // Tambahkan jika dibutuhkan
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:catatan_kuliah/models/note_model.dart';    
 import 'package:catatan_kuliah/services/firebase_service.dart';
 
 class AddNoteScreen extends StatefulWidget {
-  // 1. Revisi nama parameter agar konsisten
   final Map<dynamic, dynamic>? noteDataToEdit;
   const AddNoteScreen({super.key, this.noteDataToEdit});
 
@@ -22,10 +23,12 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
   List<Map<dynamic, dynamic>> _courses = [];
   Map<dynamic, dynamic>? _selectedCourse;
 
+  // Mendapatkan UID Pengguna yang sedang aktif login
+  final String? _currentUid = FirebaseAuth.instance.currentUser?.uid;
+
   @override
   void initState() {
     super.initState();
-    // 2. Revisi pemanggilan variabel widget yang benar
     _isEditMode = widget.noteDataToEdit != null;
 
     if (_isEditMode) {
@@ -35,9 +38,20 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
     _loadCourses();
   }
 
+  // REVISI LOGIKA: Mengambil daftar mata kuliah dari folder privat pengguna aktif
   void _loadCourses() async {
+    if (_currentUid == null) {
+      if (mounted) {
+        setState(() {
+          _courses = [];
+        });
+      }
+      return;
+    }
+
     try {
-      final snapshot = await _firebaseService.dbRef.child('courses').get();
+      // Jalur diubah dari 'courses' umum menjadi 'users_courses / $currentUid' privat
+      final snapshot = await _firebaseService.dbRef.child('users_courses').child(_currentUid!).get();
       if (snapshot.exists && snapshot.value != null) {
         final Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
         List<Map<dynamic, dynamic>> tempData = [];
@@ -51,7 +65,6 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
           setState(() {
             _courses = tempData;
             
-            // 3. Tambahan: Otomatis pilih mata kuliah yang sesuai jika dalam Mode Edit
             if (_isEditMode) {
               _selectedCourse = _courses.firstWhere(
                 (course) => course['id'] == widget.noteDataToEdit!['courseId'],
@@ -61,13 +74,26 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
             }
           });
         }
+      } else {
+        // Jika data di database memang belum ada (User baru login/belum input matkul)
+        if (mounted) {
+          setState(() {
+            _courses = [];
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error load courses: $e');
     }
   }
 
+  // Mengamankan proses simpan dan edit catatan ke dalam folder UID masing-masing
   Future<void> _submitNote() async {
+    if (_currentUid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sesi telah berakhir, silakan login kembali.')));
+      return;
+    }
+
     if (_selectedCourse == null || _titleController.text.trim().isEmpty || _contentController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Harap lengkapi semua form!')));
       return;
@@ -76,7 +102,6 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
     setState(() => _isUploading = true);
 
     try {
-      // 1. Menyusun data dasar catatan
       final Map<String, dynamic> noteData = Map<String, dynamic>.from(
         NoteModel.createNoteMap(
           courseId: _selectedCourse!['id'],
@@ -92,13 +117,20 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
       noteData['lecturer'] = _selectedCourse!['lecturer'] ?? 'Tidak ada nama dosen';
 
       if (_isEditMode) {
-        // 2. Jika di-edit, tambahkan properti 'updatedAt' dengan waktu sekarang
         noteData['updatedAt'] = DateTime.now().millisecondsSinceEpoch;
-
         final String noteId = widget.noteDataToEdit!['id'];
-        await _firebaseService.dbRef.child('notes').child(noteId).update(noteData);
+        
+        await _firebaseService.dbRef
+            .child('users_notes')
+            .child(_currentUid!)
+            .child(noteId)
+            .update(noteData);
       } else {
-        await _firebaseService.saveNote(noteData);
+        await _firebaseService.dbRef
+            .child('users_notes')
+            .child(_currentUid!)
+            .push()
+            .set(noteData);
       }
 
       if (!mounted) return;
@@ -116,7 +148,6 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 5. Revisi: Judul AppBar berubah dinamis sesuai mode
       appBar: AppBar(
         title: Text(_isEditMode ? 'Edit Catatan' : 'Tambah Catatan'), 
         backgroundColor: Colors.deepPurple, 

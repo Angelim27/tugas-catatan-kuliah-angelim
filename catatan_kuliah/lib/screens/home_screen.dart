@@ -10,8 +10,6 @@ import 'package:catatan_kuliah/screens/add_note_screen.dart';
 import 'package:catatan_kuliah/screens/note_detail_screen.dart';
 import 'package:catatan_kuliah/screens/course_list_screen.dart';
 
-
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -26,12 +24,13 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<dynamic, dynamic>> _filteredNotesList = []; 
   
   bool _isLoading = true;
-  bool _isSearching = false;                                                   
+  bool _isSearching = false;                                                                       
   final TextEditingController _searchController = TextEditingController();
 
-  // Atribut tambahan untuk menyimpan opsi pengurutan yang sedang aktif
-  // Opsi: 'terbaru', 'terlama', 'abjad'
   String _currentSortOption = 'terbaru'; 
+
+  // Ambil UID Pengguna yang sedang aktif login saat ini
+  final String? _currentUid = FirebaseAuth.instance.currentUser?.uid;
 
   @override
   void initState() {
@@ -45,8 +44,21 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // REVISI LOGIKA: Membaca database secara privat berdasarkan akun/UID masing-masing
   void _getNotesRealtime() {
-    _firebaseService.dbRef.child('notes').onValue.listen((event) {
+    if (_currentUid == null) {
+      if (mounted) {
+        setState(() {
+          _notesList = [];
+          _filteredNotesList = [];
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    // Jalur penyimpanan diubah ke 'users_notes' -> ID Unik User
+    _firebaseService.dbRef.child('users_notes').child(_currentUid!).onValue.listen((event) {
       final Map<dynamic, dynamic>? snapshotValue = event.snapshot.value as Map<dynamic, dynamic>?;
       if (snapshotValue == null) {
         if (mounted) {
@@ -82,7 +94,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // LOGIKA BARU: Fungsi khusus untuk mengurutkan list catatan berdasarkan pilihan user
   void _sortNotesList(String option) {
     _currentSortOption = option;
     
@@ -90,23 +101,22 @@ class _HomeScreenState extends State<HomeScreen> {
       _notesList.sort((a, b) {
         final int timestampA = a['timestamp'] ?? 0;
         final int timestampB = b['timestamp'] ?? 0;
-        return timestampB.compareTo(timestampA); // Descending
+        return timestampB.compareTo(timestampA); 
       });
     } else if (option == 'terlama') {
       _notesList.sort((a, b) {
         final int timestampA = a['timestamp'] ?? 0;
         final int timestampB = b['timestamp'] ?? 0;
-        return timestampA.compareTo(timestampB); // Ascending
+        return timestampA.compareTo(timestampB); 
       });
     } else if (option == 'abjad') {
       _notesList.sort((a, b) {
         final String titleA = (a['courseName'] ?? '').toString().toLowerCase();
         final String titleB = (b['courseName'] ?? '').toString().toLowerCase();
-        return titleA.compareTo(titleB); // A-Z berdasarkan Nama Makul
+        return titleA.compareTo(titleB); 
       });
     }
 
-    // Perbarui daftar filtered agar visual layar langsung berubah
     if (!_isSearching) {
       _filteredNotesList = List.from(_notesList);
     } else {
@@ -114,7 +124,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Bonus: Pencarian Catatan
   void _filterNotes(String query) {
     List<Map<dynamic, dynamic>> results = [];
     if (query.isEmpty) {
@@ -153,14 +162,30 @@ class _HomeScreenState extends State<HomeScreen> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
             ElevatedButton(
               onPressed: () async {
+                if (_currentUid == null) return; // Keamanan dasar jika sesi kosong
+
                 if (nameController.text.trim().isEmpty || lecturerController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Semua field wajib diisi!')));
                   return;
                 }
                 try {
-                  await _firebaseService.saveCourse(nameController.text.trim(), lecturerController.text.trim());
+                  // REVISI LOGIKA: Menyimpan mata kuliah khusus di folder UID milik user sendiri
+                  await _firebaseService.dbRef
+                      .child('users_courses')
+                      .child(_currentUid!)
+                      .push()
+                      .set({
+                        'name': nameController.text.trim(),
+                        'lecturer': lecturerController.text.trim(),
+                        'createdAt': DateTime.now().millisecondsSinceEpoch,
+                      });
+
                   if (!context.mounted) return;
                   Navigator.pop(context);
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Mata kuliah berhasil ditambahkan!'), backgroundColor: Colors.green),
+                  );
                 } catch (e) {
                   debugPrint('Failed to add course: $e');
                 }
@@ -219,14 +244,12 @@ class _HomeScreenState extends State<HomeScreen> {
               });
             },
           ),
-          
-          // TOMBOL BARU: Pop-up Menu Pengurutan di sebelah kanan AppBar
           PopupMenuButton<String>(
             icon: const Icon(Icons.sort),
             tooltip: 'Urutkan Catatan',
             onSelected: (String value) {
               setState(() {
-                _sortNotesList(value); // Jalankan fungsi sortir sesuai pilihan
+                _sortNotesList(value); 
               });
             },
             itemBuilder: (BuildContext context) => [
@@ -265,66 +288,128 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
+        child: Column( 
           children: [
-            // GERBANG DINAMIS: Mengambil data user yang sedang login dari Firestore
-            FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(FirebaseAuth.instance.currentUser?.uid)
-                  .get(),
-              builder: (context, snapshot) {
-                // Ambil email langsung dari Firebase Auth sebagai cadangan cepat
-                final String userEmail = FirebaseAuth.instance.currentUser?.email ?? 'Tidak ada email';
-                String userName = 'Memuat nama...';
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  // 1. Header Profil Pengguna (Dinamis dari Firestore)
+                  FutureBuilder<DocumentSnapshot>(
+                    future: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(_currentUid)
+                        .get(),
+                    builder: (context, snapshot) {
+                      final String userEmail = FirebaseAuth.instance.currentUser?.email ?? 'Tidak ada email';
+                      String userName = 'Memuat nama...';
 
-                if (snapshot.hasData && snapshot.data!.exists) {
-                  final data = snapshot.data!.data() as Map<String, dynamic>?;
-                  userName = data?['fullName'] ?? 'Pengguna';
-                }
+                      if (snapshot.hasData && snapshot.data!.exists) {
+                        final data = snapshot.data!.data() as Map<String, dynamic>?;
+                        userName = data?['fullName'] ?? 'Pengguna';
+                      }
 
-                return UserAccountsDrawerHeader(
-                  accountName: Text(userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  accountEmail: Text(userEmail),
-                  currentAccountPicture: const CircleAvatar(
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.person, color: Colors.deepPurple, size: 40),
+                      return UserAccountsDrawerHeader(
+                        accountName: Text(userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        accountEmail: Text(userEmail),
+                        currentAccountPicture: const CircleAvatar(
+                          backgroundColor: Colors.white,
+                          child: Icon(Icons.person, color: Colors.deepPurple, size: 40),
+                        ),
+                        decoration: const BoxDecoration(color: Colors.deepPurple),
+                      );
+                    },
                   ),
-                  decoration: const BoxDecoration(color: Colors.deepPurple),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.class_, color: Colors.deepPurple),
-              title: const Text(
-                'Daftar Mata Kuliah',
-                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+
+                  // 2. Menu Daftar Mata Kuliah
+                  ListTile(
+                    leading: const Icon(Icons.class_, color: Colors.deepPurple),
+                    title: const Text('Daftar Mata Kuliah', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const CourseListScreen()),
+                      );
+                    },
+                  ),
+
+                  // 3. Menu Daftar Catatan
+                  ListTile(
+                    leading: const Icon(Icons.class_, color: Colors.deepPurple),
+                    title: const Text('Daftar Catatan', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
+                    onTap: () {
+                      Navigator.pop(context); // Cukup tutup lacinya saja
+                    },
+                  ),
+
+                  // 4. Menu Switch Dark Mode
+                  ListTile(
+                    leading: const Icon(Icons.dark_mode, color: Colors.deepPurple),
+                    title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
+                    trailing: Switch(
+                      value: themeProvider.isDarkMode,
+                      activeColor: Colors.deepPurple,
+                      onChanged: (value) {
+                        themeProvider.toggleTheme(); 
+                      },
+                    ),
+                  ),
+                ],
               ),
-              onTap: () {
-                Navigator.pop(context); // Menutup laci drawer terlebih dahulu
-                // Navigasi masuk ke halaman daftar mata kuliah yang sudah dibuat tadi
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const CourseListScreen()),
-                );
-              },
             ),
 
-            // Garis pembatas tipis agar tampilan menu terlihat rapi dan profesional
+            // Bagian Bawah: Mengunci tombol Logout di dasar laci samping
             const Divider(height: 1, thickness: 0.5),
-            
-            ListTile(
-              leading: const Icon(Icons.dark_mode, color: Colors.deepPurple),
-              title: const Text(
-                'Dark Mode',
-                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
-              ),
-              trailing: Switch(
-                value: themeProvider.isDarkMode,
-                activeColor: Colors.deepPurple,
-                onChanged: (value) {
-                  themeProvider.toggleTheme(); 
+            SafeArea( 
+              top: false,
+              child: ListTile(
+                leading: const Icon(Icons.logout, color: Colors.red),
+                title: const Text(
+                  'Keluar Akun (Log Out)',
+                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15, color: Colors.red),
+                ),
+                onTap: () {
+                  // Kotak Dialog Konfirmasi Keluar
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Konfirmasi Keluar'),
+                          ],
+                        ),
+                        content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red.shade50,
+                              elevation: 0,
+                            ),
+                            onPressed: () async {
+                              // REVISI PENUTUPAN: Menutup dialog dan laci sebelum membersihkan token sesi login
+                              Navigator.pop(context); // Tutup dialog
+                              Navigator.pop(context); // Tutup drawer laci
+                              
+                              await FirebaseAuth.instance.signOut();
+                            },
+                            child: const Text(
+                              'Keluar',
+                              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
                 },
               ),
             ),
@@ -421,11 +506,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                           MaterialPageRoute(builder: (context) => AddNoteScreen(noteDataToEdit: note)),
                                         );
                                       } 
-                                      // REVISI DI SINI: Membuka dialog konfirmasi sebelum benar-benar menghapus ke Firebase
                                       else if (value == 'delete' && note['id'] != null) {
                                         showDialog(
                                           context: context,
-                                          barrierDismissible: false, // User wajib memilih salah satu tombol, tidak bisa asal klik di luar dialog
+                                          barrierDismissible: false,
                                           builder: (BuildContext context) {
                                             return AlertDialog(
                                               title: const Row(
@@ -437,24 +521,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                               ),
                                               content: const Text('Apakah Anda yakin ingin menghapus catatan kuliah ini? Tindakan ini tidak dapat dibatalkan.'),
                                               actions: [
-                                                // Tombol Batal
                                                 TextButton(
-                                                  onPressed: () {
-                                                    Navigator.pop(context); // Menutup dialog tanpa menghapus apa-apa
-                                                  },
+                                                  onPressed: () => Navigator.pop(context),
                                                   child: const Text('Batal', style: TextStyle(color: Colors.grey)),
                                                 ),
-                                                // Tombol Hapus (Eksekusi)
                                                 ElevatedButton(
                                                   style: ElevatedButton.styleFrom(
                                                     backgroundColor: Colors.red.shade50,
                                                     elevation: 0,
                                                   ),
                                                   onPressed: () async {
-                                                    Navigator.pop(context); // Tutup dialognya dulu
-                                                    await _firebaseService.deleteNote(note['id']); // Baru eksekusi hapus data dari Firebase
+                                                    Navigator.pop(context); 
+                                                    await _firebaseService.deleteNote(note['id']); 
                                                     
-                                                    // Memberikan feedback sukses berupa SnackBar kecil di bawah layar
                                                     if (!context.mounted) return;
                                                     ScaffoldMessenger.of(context).showSnackBar(
                                                       const SnackBar(
