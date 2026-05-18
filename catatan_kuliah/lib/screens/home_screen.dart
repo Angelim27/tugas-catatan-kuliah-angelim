@@ -9,6 +9,7 @@ import 'package:catatan_kuliah/services/theme_provider.dart';
 import 'package:catatan_kuliah/screens/add_note_screen.dart';
 import 'package:catatan_kuliah/screens/note_detail_screen.dart';
 import 'package:catatan_kuliah/screens/course_list_screen.dart';
+import 'package:catatan_kuliah/screens/sign_in_screen.dart'; // Pastikan import SignInScreen tetap ada untuk tombol klik Sign Up
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,8 +30,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _currentSortOption = 'terbaru'; 
 
-  // Ambil UID Pengguna yang sedang aktif login saat ini
-  final String? _currentUid = FirebaseAuth.instance.currentUser?.uid;
+  // REVISI LOGIKA: Mengubah UID menjadi variabel dinamis agar bisa berubah saat logout tanpa ganti halaman
+  String? get _currentUid => FirebaseAuth.instance.currentUser?.uid;
 
   @override
   void initState() {
@@ -44,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // REVISI LOGIKA: Membaca database secara privat berdasarkan akun/UID masing-masing
+  // Membaca database secara privat berdasarkan akun/UID masing-masing
   void _getNotesRealtime() {
     if (_currentUid == null) {
       if (mounted) {
@@ -57,7 +58,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    // Jalur penyimpanan diubah ke 'users_notes' -> ID Unik User
     _firebaseService.dbRef.child('users_notes').child(_currentUid!).onValue.listen((event) {
       final Map<dynamic, dynamic>? snapshotValue = event.snapshot.value as Map<dynamic, dynamic>?;
       if (snapshotValue == null) {
@@ -82,7 +82,6 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _notesList = temporaryList;
           
-          // Jalankan fungsi pengurutan & filter data
           _sortNotesList(_currentSortOption);
           
           if (_isSearching) {
@@ -162,14 +161,13 @@ class _HomeScreenState extends State<HomeScreen> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
             ElevatedButton(
               onPressed: () async {
-                if (_currentUid == null) return; // Keamanan dasar jika sesi kosong
+                if (_currentUid == null) return; 
 
                 if (nameController.text.trim().isEmpty || lecturerController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Semua field wajib diisi!')));
                   return;
                 }
                 try {
-                  // REVISI LOGIKA: Menyimpan mata kuliah khusus di folder UID milik user sendiri
                   await _firebaseService.dbRef
                       .child('users_courses')
                       .child(_currentUid!)
@@ -294,39 +292,69 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  // 1. Header Profil Pengguna (Dinamis dari Firestore)
+                  // 1. Header Profil Pengguna (Dinamis: Jika Logout otomatis ganti ke Tampilan Foto 2)
                   FutureBuilder<DocumentSnapshot>(
-                    future: FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(_currentUid)
-                        .get(),
+                    future: _currentUid != null 
+                        ? FirebaseFirestore.instance.collection('users').doc(_currentUid).get()
+                        : null,
                     builder: (context, snapshot) {
-                      final String userEmail = FirebaseAuth.instance.currentUser?.email ?? 'Tidak ada email';
-                      String userName = 'Memuat nama...';
+                      final currentUser = FirebaseAuth.instance.currentUser;
+                      
+                      String userName = 'Sign Up';
+                      String userEmail = 'Silakan masuk ke akun Anda';
 
-                      if (snapshot.hasData && snapshot.data!.exists) {
-                        final data = snapshot.data!.data() as Map<String, dynamic>?;
-                        userName = data?['fullName'] ?? 'Pengguna';
+                      if (currentUser != null) {
+                        userEmail = currentUser.email ?? 'Tidak ada email';
+                        
+                        if (snapshot.hasData && snapshot.data!.exists) {
+                          final data = snapshot.data!.data() as Map<String, dynamic>?;
+                          userName = data?['fullName'] ?? 'Pengguna';
+                        } else if (snapshot.connectionState == ConnectionState.waiting) {
+                          userName = 'Memuat nama...';
+                        } else {
+                          userName = 'Pengguna';
+                        }
                       }
 
-                      return UserAccountsDrawerHeader(
-                        accountName: Text(userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        accountEmail: Text(userEmail),
-                        currentAccountPicture: const CircleAvatar(
-                          backgroundColor: Colors.white,
-                          child: Icon(Icons.person, color: Colors.deepPurple, size: 40),
+                      return InkWell(
+                        onTap: () {
+                          if (currentUser == null) {
+                            Navigator.pop(context); // Tutup drawer
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const SignInScreen()),
+                            );
+                          }
+                        },
+                        child: UserAccountsDrawerHeader(
+                          accountName: Row(
+                            children: [
+                              Text(userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              if (currentUser == null) ...[
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white70),
+                              ],
+                            ],
+                          ),
+                          accountEmail: Text(userEmail),
+                          currentAccountPicture: const CircleAvatar(
+                            backgroundColor: Colors.white,
+                            child: Icon(Icons.person, color: Colors.deepPurple, size: 40),
+                          ),
+                          decoration: const BoxDecoration(color: Colors.deepPurple),
                         ),
-                        decoration: const BoxDecoration(color: Colors.deepPurple),
                       );
                     },
                   ),
 
-                  // 2. Menu Daftar Mata Kuliah
+                  // 2. Menu Daftar Mata Kuliah (REVISI TRANSISI: Kembali Menggunakan Transisi Normal Bawaan Sistem)
                   ListTile(
                     leading: const Icon(Icons.class_, color: Colors.deepPurple),
                     title: const Text('Daftar Mata Kuliah', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
                     onTap: () {
-                      Navigator.pop(context);
+                      Navigator.pop(context); // Tutup drawer laci samping
+                      
+                      // Transisi memudar dihapus, kembali menggunakan transisi standar Flutter
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const CourseListScreen()),
@@ -336,10 +364,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // 3. Menu Daftar Catatan
                   ListTile(
-                    leading: const Icon(Icons.class_, color: Colors.deepPurple),
+                    leading: const Icon(Icons.note, color: Colors.deepPurple),
                     title: const Text('Daftar Catatan', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
                     onTap: () {
-                      Navigator.pop(context); // Cukup tutup lacinya saja
+                      Navigator.pop(context); 
                     },
                   ),
 
@@ -370,7 +398,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15, color: Colors.red),
                 ),
                 onTap: () {
-                  // Kotak Dialog Konfirmasi Keluar
                   showDialog(
                     context: context,
                     barrierDismissible: false,
@@ -395,10 +422,16 @@ class _HomeScreenState extends State<HomeScreen> {
                               elevation: 0,
                             ),
                             onPressed: () async {
-                              // REVISI PENUTUPAN: Menutup dialog dan laci sebelum membersihkan token sesi login
-                              Navigator.pop(context); // Tutup dialog
-                              Navigator.pop(context); // Tutup drawer laci
+                              Navigator.pop(context); // Tutup dialog konfirmasi
+                              Navigator.pop(context); // Tutup laci drawer samping
                               
+                              // REVISI LOGOUT TOTAL: Kosongkan list catatan lokal & gambar ulang UI saat itu juga
+                              setState(() {
+                                _notesList = [];
+                                _filteredNotesList = [];
+                              });
+
+                              // Sesi login dimatikan, aplikasi TETAP berada di HomeScreen dalam keadaan kosong bersih
                               await FirebaseAuth.instance.signOut();
                             },
                             child: const Text(

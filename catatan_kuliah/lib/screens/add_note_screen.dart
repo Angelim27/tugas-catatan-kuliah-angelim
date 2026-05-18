@@ -90,12 +90,12 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
   // Mengamankan proses simpan dan edit catatan ke dalam folder UID masing-masing
   Future<void> _submitNote() async {
     if (_currentUid == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sesi telah berakhir, silakan login kembali.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Colors.red, content: Text('Sesi telah berakhir, silakan login kembali.')));
       return;
     }
 
     if (_selectedCourse == null || _titleController.text.trim().isEmpty || _contentController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Harap lengkapi semua form!')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Colors.red, content: Text('Harap lengkapi semua form!')));
       return;
     }
 
@@ -136,7 +136,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isEditMode ? 'Catatan berhasil diperbarui!' : 'Catatan disimpan!')),
+        SnackBar(backgroundColor: Colors.green, content: Text(_isEditMode ? 'Catatan berhasil diperbarui!' : 'Catatan disimpan!')),
       );
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
