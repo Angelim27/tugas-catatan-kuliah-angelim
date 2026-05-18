@@ -55,7 +55,6 @@ class SignInScreenState extends State<SignInScreen> {
     return RegExp(emailRegex).hasMatch(email);
   }
 
-  // Mengubah pesan eror Firebase bawaan ke Bahasa Indonesia yang mudah dipahami
   String _getAuthErrorMessage(String code) {
     switch (code) {
       case 'user-not-found':
@@ -73,7 +72,7 @@ class SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Masuk Aplikasi'), // Mengikuti Bahasa Indonesia
+        title: const Text('Masuk Aplikasi'), 
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
       ),
@@ -92,13 +91,13 @@ class SignInScreenState extends State<SignInScreen> {
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
-                      labelText: 'Alamat Email', // Bahasa Indonesia
+                      labelText: 'Alamat Email',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.email),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty || !_isValidEmail(value)) {
-                        return 'Silakan masukkan email yang valid'; // Bahasa Indonesia
+                        return 'Silakan masukkan email yang valid';
                       }
                       return null;
                     },
@@ -108,7 +107,7 @@ class SignInScreenState extends State<SignInScreen> {
                     controller: _passwordController,
                     obscureText: !_isPasswordVisible,
                     decoration: InputDecoration(
-                      labelText: 'Kata Sandi (Password)', // Bahasa Indonesia
+                      labelText: 'Kata Sandi (Password)',
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.lock),
                       suffixIcon: IconButton(
@@ -126,7 +125,7 @@ class SignInScreenState extends State<SignInScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Silakan masukkan kata sandi Anda'; // Bahasa Indonesia
+                        return 'Silakan masukkan kata sandi Anda'; 
                       }
                       return null;
                     },
@@ -143,7 +142,7 @@ class SignInScreenState extends State<SignInScreen> {
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
-                            child: const Text('MASUK', style: TextStyle(fontWeight: FontWeight.bold)), // Bahasa Indonesia
+                            child: const Text('MASUK', style: TextStyle(fontWeight: FontWeight.bold)), 
                           ),
                         ),
                   const SizedBox(height: 16.0),
@@ -154,9 +153,9 @@ class SignInScreenState extends State<SignInScreen> {
                         color: Colors.black,
                       ),
                       children: [
-                        const TextSpan(text: "Belum punya akun? "), // Bahasa Indonesia
+                        const TextSpan(text: "Belum punya akun? "), 
                         TextSpan(
-                          text: "Daftar Sekarang", // Bahasa Indonesia
+                          text: "Daftar Sekarang",
                           style: const TextStyle(
                             color: Colors.blue,
                             fontWeight: FontWeight.bold,

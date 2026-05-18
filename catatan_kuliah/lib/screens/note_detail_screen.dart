@@ -27,7 +27,7 @@ class NoteDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Bagian Atas: Info Mata Kuliah Card
+            // Info Mata Kuliah Card
             Card(
               elevation: 0,
               color: Colors.deepPurple.withOpacity(0.05),
@@ -66,7 +66,7 @@ class NoteDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Bagian Tengah: Judul Catatan
+            // Judul Catatan
             const Text(
               'Judul Catatan:',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey),
@@ -78,7 +78,7 @@ class NoteDetailScreen extends StatelessWidget {
             ),
             const Divider(height: 32, thickness: 1),
 
-            // Bagian Konten: Isi Catatan
+            // Isi Catatan
             const Text(
               'Isi Catatan:',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey),
@@ -90,7 +90,7 @@ class NoteDetailScreen extends StatelessWidget {
             ),
             const Divider(height: 40, thickness: 1),
 
-            // Bagian Bawah: Info Riwayat Waktu
+            // Info Riwayat Waktu
             Row(
               children: [
                 const Icon(Icons.calendar_today, size: 14, color: Colors.grey),

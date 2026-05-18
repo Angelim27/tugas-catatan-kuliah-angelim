@@ -9,7 +9,7 @@ import 'package:catatan_kuliah/services/theme_provider.dart';
 import 'package:catatan_kuliah/screens/add_note_screen.dart';
 import 'package:catatan_kuliah/screens/note_detail_screen.dart';
 import 'package:catatan_kuliah/screens/course_list_screen.dart';
-import 'package:catatan_kuliah/screens/sign_in_screen.dart'; // Pastikan import SignInScreen tetap ada untuk tombol klik Sign Up
+import 'package:catatan_kuliah/screens/sign_in_screen.dart'; 
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,7 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _currentSortOption = 'terbaru'; 
 
-  // REVISI LOGIKA: Mengubah UID menjadi variabel dinamis agar bisa berubah saat logout tanpa ganti halaman
   String? get _currentUid => FirebaseAuth.instance.currentUser?.uid;
 
   @override
@@ -60,6 +59,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _firebaseService.dbRef.child('users_notes').child(_currentUid!).onValue.listen((event) {
       final Map<dynamic, dynamic>? snapshotValue = event.snapshot.value as Map<dynamic, dynamic>?;
+      
+      // REVISI UTAMA: Jika snapshot kosong (data dihapus semua), bersihkan list lokal di dalam setState agar layar langsung kosong
       if (snapshotValue == null) {
         if (mounted) {
           setState(() {
@@ -86,6 +87,8 @@ class _HomeScreenState extends State<HomeScreen> {
           
           if (_isSearching) {
             _filterNotes(_searchController.text);
+          } else {
+            _filteredNotesList = List.from(_notesList); // Memastikan filtered list ikut terupdate saat ada data dihapus
           }
           _isLoading = false;
         });
@@ -292,7 +295,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  // 1. Header Profil Pengguna (Dinamis: Jika Logout otomatis ganti ke Tampilan Foto 2)
+                  // Header Profil Pengguna
                   FutureBuilder<DocumentSnapshot>(
                     future: _currentUid != null 
                         ? FirebaseFirestore.instance.collection('users').doc(_currentUid).get()
@@ -319,7 +322,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       return InkWell(
                         onTap: () {
                           if (currentUser == null) {
-                            Navigator.pop(context); // Tutup drawer
+                            Navigator.pop(context); 
                             Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => const SignInScreen()),
@@ -347,14 +350,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
 
-                  // 2. Menu Daftar Mata Kuliah (REVISI TRANSISI: Kembali Menggunakan Transisi Normal Bawaan Sistem)
+                  // Menu Daftar Mata Kuliah
                   ListTile(
                     leading: const Icon(Icons.class_, color: Colors.deepPurple),
                     title: const Text('Daftar Mata Kuliah', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
                     onTap: () {
-                      Navigator.pop(context); // Tutup drawer laci samping
-                      
-                      // Transisi memudar dihapus, kembali menggunakan transisi standar Flutter
+                      Navigator.pop(context); 
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const CourseListScreen()),
@@ -362,7 +363,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
 
-                  // 3. Menu Daftar Catatan
+                  // Menu Daftar Catatan
                   ListTile(
                     leading: const Icon(Icons.note, color: Colors.deepPurple),
                     title: const Text('Daftar Catatan', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
@@ -371,7 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
 
-                  // 4. Menu Switch Dark Mode
+                  // Menu Switch Dark Mode
                   ListTile(
                     leading: const Icon(Icons.dark_mode, color: Colors.deepPurple),
                     title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
@@ -387,7 +388,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Bagian Bawah: Mengunci tombol Logout di dasar laci samping
             const Divider(height: 1, thickness: 0.5),
             SafeArea( 
               top: false,
@@ -422,16 +422,14 @@ class _HomeScreenState extends State<HomeScreen> {
                               elevation: 0,
                             ),
                             onPressed: () async {
-                              Navigator.pop(context); // Tutup dialog konfirmasi
-                              Navigator.pop(context); // Tutup laci drawer samping
+                              Navigator.pop(context); 
+                              Navigator.pop(context); 
                               
-                              // REVISI LOGOUT TOTAL: Kosongkan list catatan lokal & gambar ulang UI saat itu juga
                               setState(() {
                                 _notesList = [];
                                 _filteredNotesList = [];
                               });
 
-                              // Sesi login dimatikan, aplikasi TETAP berada di HomeScreen dalam keadaan kosong bersih
                               await FirebaseAuth.instance.signOut();
                             },
                             child: const Text(
@@ -565,7 +563,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   ),
                                                   onPressed: () async {
                                                     Navigator.pop(context); 
+                                                    
+                                                    // Hapus dari Realtime Database Firebase
                                                     await _firebaseService.deleteNote(note['id']); 
+                                                    
+                                                    // REVISI: Hapus item secara instan dari filtered list lokal agar UI langsung bersih tanpa delay
+                                                    setState(() {
+                                                      _filteredNotesList.removeAt(index);
+                                                    });
                                                     
                                                     if (!context.mounted) return;
                                                     ScaffoldMessenger.of(context).showSnackBar(

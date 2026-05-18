@@ -1,6 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Import Provider
+import 'package:provider/provider.dart'; 
 import 'firebase_options.dart';
 import 'package:catatan_kuliah/screens/home_screen.dart';
 import 'package:catatan_kuliah/services/theme_provider.dart';
@@ -24,7 +24,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Membaca status tema saat ini (Dark atau Light)
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(

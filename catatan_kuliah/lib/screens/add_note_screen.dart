@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart'; // Tambahkan jika dibutuhkan
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -38,7 +38,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
     _loadCourses();
   }
 
-  // REVISI LOGIKA: Mengambil daftar mata kuliah dari folder privat pengguna aktif
+  // Mengambil daftar mata kuliah dari folder privat pengguna aktif
   void _loadCourses() async {
     if (_currentUid == null) {
       if (mounted) {
@@ -50,7 +50,6 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
     }
 
     try {
-      // Jalur diubah dari 'courses' umum menjadi 'users_courses / $currentUid' privat
       final snapshot = await _firebaseService.dbRef.child('users_courses').child(_currentUid!).get();
       if (snapshot.exists && snapshot.value != null) {
         final Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
@@ -75,7 +74,6 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
           });
         }
       } else {
-        // Jika data di database memang belum ada (User baru login/belum input matkul)
         if (mounted) {
           setState(() {
             _courses = [];

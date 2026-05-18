@@ -44,7 +44,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Akun berhasil dibuat!')),
+          const SnackBar(backgroundColor: Colors.green, content: Text('Akun berhasil dibuat!')),
         );
         // Kembali ke halaman Sign In setelah pendaftaran sukses
         Navigator.pop(context);
@@ -66,7 +66,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  // Mengubah pesan eror Firebase Auth ke Bahasa Indonesia
   String _getAuthErrorMessage(String code) {
     switch (code) {
       case 'email-already-in-use': return 'Email sudah digunakan oleh akun lain.';
@@ -169,7 +168,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: 24.0),
                 
-                // Tombol Submit / Loading Indicator
+                // Tombol Submit - Loading Indicator
                 _isLoading
                     ? const CircularProgressIndicator()
                     : SizedBox(

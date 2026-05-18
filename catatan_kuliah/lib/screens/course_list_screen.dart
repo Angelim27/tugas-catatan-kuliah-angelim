@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; 
 import 'package:catatan_kuliah/services/firebase_service.dart';
 import 'package:catatan_kuliah/services/theme_provider.dart'; 
-import 'package:catatan_kuliah/screens/sign_in_screen.dart'; // Pastikan import ini sesuai nama file login kamu
+import 'package:catatan_kuliah/screens/sign_in_screen.dart'; 
 
 class CourseListScreen extends StatefulWidget {
   const CourseListScreen({super.key});
@@ -60,13 +60,6 @@ class _CourseListScreenState extends State<CourseListScreen> {
         temporaryList.add(courseData);
       });
 
-      // Urutkan mata kuliah berdasarkan abjad A-Z
-      temporaryList.sort((a, b) {
-        final String nameA = (a['name'] ?? '').toString().toLowerCase();
-        final String nameB = (b['name'] ?? '').toString().toLowerCase();
-        return nameA.compareTo(nameB);
-      });
-
       if (mounted) {
         setState(() {
           _coursesList = temporaryList;
@@ -109,7 +102,7 @@ class _CourseListScreenState extends State<CourseListScreen> {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  // 1. Header Profil Pengguna (Bebas Error & Bisa Diklik Saat Logout)
+                  // 1. Header Profil Pengguna 
                   FutureBuilder<DocumentSnapshot>(
                     future: _currentUid != null 
                         ? FirebaseFirestore.instance.collection('users').doc(_currentUid).get()
@@ -136,11 +129,11 @@ class _CourseListScreenState extends State<CourseListScreen> {
                       return InkWell(
                         onTap: () {
                           if (currentUser == null) {
-                            Navigator.pop(context); // Tutup drawer
+                            Navigator.pop(context); 
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const SignInScreen(), // Alihkan langsung ke halaman Sign In
+                                builder: (context) => const SignInScreen(), 
                               ),
                             );
                           }
@@ -174,11 +167,11 @@ class _CourseListScreenState extends State<CourseListScreen> {
                     leading: const Icon(Icons.class_, color: Colors.deepPurple),
                     title: const Text('Daftar Mata Kuliah', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
                     onTap: () {
-                      Navigator.pop(context); // Cukup tutup lacinya saja
+                      Navigator.pop(context); 
                     },
                   ),
 
-                  // 3. Menu Tambahan: Kembali ke Daftar Catatan Utama (HomeScreen)
+                  // 3. Menu Daftar Catatan 
                   ListTile(
                     leading: const Icon(Icons.class_, color: Colors.deepPurple),
                     title: const Text('Daftar Catatan ', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
@@ -207,7 +200,7 @@ class _CourseListScreenState extends State<CourseListScreen> {
               ),
             ),
 
-            // Bagian Bawah: Tombol Logout di dasar laci samping
+            // Tombol Logout di dasar laci 
             const Divider(height: 1, thickness: 0.5),
             SafeArea(
               top: false,
@@ -242,8 +235,8 @@ class _CourseListScreenState extends State<CourseListScreen> {
                               elevation: 0,
                             ),
                             onPressed: () async {
-                              Navigator.pop(context); // Tutup dialog
-                              Navigator.pop(context); // Tutup laci drawer
+                              Navigator.pop(context); 
+                              Navigator.pop(context); 
                               
                               setState(() {}); 
                               
