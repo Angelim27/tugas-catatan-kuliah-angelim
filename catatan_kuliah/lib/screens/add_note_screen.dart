@@ -158,24 +158,51 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
           children: [
             const Text('Mata Kuliah', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            DropdownButtonFormField<Map<dynamic, dynamic>>(
-              value: _selectedCourse,
-              hint: const Text('Pilih Mata Kuliah'),
-              isExpanded: true,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-              ),
-              items: _courses.map((course) {
-                return DropdownMenuItem<Map<dynamic, dynamic>>(
-                  value: course, 
-                  child: Text(course['name'] ?? ''),
+            
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return DropdownMenu<Map<dynamic, dynamic>>(
+                  width: constraints.maxWidth, 
+                  hintText: 'Pilih Mata Kuliah',
+                  initialSelection: _selectedCourse,
+                  
+                  menuStyle: MenuStyle(
+                    shape: WidgetStateProperty.all(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                  
+                  inputDecorationTheme: InputDecorationTheme(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  ),
+                  onSelected: (Map<dynamic, dynamic>? val) {
+                    setState(() {
+                      _selectedCourse = val;
+                    });
+                  },
+                  
+                  dropdownMenuEntries: _courses.map<DropdownMenuEntry<Map<dynamic, dynamic>>>((course) {
+                    return DropdownMenuEntry<Map<dynamic, dynamic>>(
+                      value: course,
+                      label: course['name'] ?? '',
+                      labelWidget: SizedBox(
+                        width: constraints.maxWidth - 32, 
+                        child: Text(
+                          course['name'] ?? '',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 );
-              }).toList(),
-              onChanged: (val) => setState(() => _selectedCourse = val),
+              },
             ),
+            
             const SizedBox(height: 16),
             const Text('Judul Catatan', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
